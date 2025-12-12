@@ -1,0 +1,205 @@
+<!doctype html>
+    <html>
+    <head>
+        <title>スクロールゲーム</title>
+        <canvas id="cv" width="640" height="360" style="background:#0e1528"></canvas>
+    </head>
+    <body>
+        <script>
+        const cv = document.getElementById('cv');
+        const ctx = cv.getContext('2d');
+
+        // ── オブジェクト ─────────────────────────
+        const player = { x: 200, y: 260, w: 28, h: 36 };
+        const floor  = { x: 0,  y: 320, w: 640, h: 40 };
+        const plat   = { x: 360, y: 240, w: 100, h: 16 }; // 浮遊足場
+        const plat2   = { x: 160, y: 180, w: 160, h: 16 }; // 浮遊足場
+        const plat3   = { x: 300, y: 100, w: 140, h: 16 }; // 浮遊足場
+        
+        // ゴール
+        const goal = { x: 400, y: 40, w: 40, h: 60 };
+        let isClear = false;
+
+        // ─ 動く足場 ─// ★追加
+        const wall = { x: 150, y: 0, w: 16, h: 320, vx: 100, dir: 1 };
+        const wall2 = { x: 400, y: 0, w: 16, h: 320, vx: 100, dir: 1 };
+
+        // ── 物理パラメータ ────────────────────────
+        let vx = 0    // 横方向の移動速度
+        let vy = 0;
+        const speed = 240;   // 地上での移動速度(px/s)
+        const jump  = 700;   // ジャンプ初速(px/s)
+        const g     = 2000;  // 重力加速度(px/s^2)
+        let isGrounded = false;
+
+        // ── 入力 ──────────────────────────────────
+        const keys = {};
+        addEventListener('keydown', e => keys[e.key] = true);   // イベントリスナ、第2引数はアロー関数
+        addEventListener('keyup',   e => keys[e.key] = false);  // イベントリスナ、第２引数はアロー関数
+        addEventListener('keydown', e=>{
+        // 地上にいるときだけジャンプ
+        if (e.code === 'Space' && isGrounded) vy = -jump;     // パラメータを使用
+        });
+
+        // ── 当たり判定ユーティリティ（AABB） ──────
+        function aabb(r1, r2) {
+            return (r1.x < r2.x + r2.w && r1.x + r1.w > r2.x &&
+                    r1.y < r2.y + r2.h && r1.y + r1.h > r2.y);
+        }
+
+        // ── 衝突処理：床 ──────────────────────────
+        function collideWithFloor() {
+            const bottom = player.y + player.h;
+            if (bottom > floor.y) {
+                player.y = floor.y - player.h; // 吸着
+                vy = 0;
+                isGrounded = true;
+            }
+        }
+
+        // ── 衝突処理：浮遊足場（上からのみ着地） ──
+        function collideWithPlatform(dt, plat) {
+            // 今フレームの矩形
+            const pNow = { x: player.x, y: player.y, w: player.w, h: player.h };
+            if (!aabb(pNow, plat)) return; // そもそも重なっていない
+
+            // 前フレームの“底”が足場の上面より上にあったなら「上から来た」とみなす
+            const prevTop = player.y - vy * dt;
+            const prevBottom = (player.y - vy * dt) + player.h;
+            const prevLeft = player.x - vx * dt;
+            const prevRight = (player.x - vx * dt) + player.w;
+
+            const platformTop = plat.y;
+            const platformBottom = plat.y + plat.h;
+            const platformLeft = plat.x;
+            const platformRight = plat.x + plat.w;
+
+            if (prevBottom <= platformTop && vy >= 0) {
+                // 上から着地
+                player.y = platformTop - player.h; // 吸着
+                vy = 0;
+                isGrounded = true;
+            } else if (prevTop >= platformBottom && vy <= 0){ // 天井衝突
+                player.y = platformBottom;
+                vy = 0;
+            } else if (prevLeft >= platformRight && vx <= 0){ //横からのめり込み解除
+                player.x = platformRight;
+                vx = 0;
+            } else if (prevRight <= platformLeft && vx >= 0){
+                player.x = platformLeft - player.w;
+                vx = 0;
+            }
+        }
+
+        // ── 移動処理：動く壁 ────────────────//
+        function moveWall(dt) {
+            wall.x += wall.vx * wall.dir * dt;
+            if (wall.x < 50 || wall.x + wall.w > 300) wall.dir *= -1;
+            wall2.x += wall2.vx * wall2.dir * dt;
+            if (wall2.x < 350 || wall2.x + wall2.w > 600) wall2.dir *= -1;
+        }
+
+        // ── 衝突処理：動く壁 ────────────────//
+        function collideWithWall(dt){
+            if (aabb(player, wall)){//左の壁に衝突したとき
+                const prevLeft = player.x - vx * dt;
+                const prevRight = (player.x - vx * dt) + player.w;
+
+                if (prevLeft <= wall.x + wall.w && vx <= 0){ 
+                    player.x = wall.x + wall.w;
+                    vx = 0;
+                }
+            }
+
+            if (aabb(player, wall2)){//右の壁に衝突したとき
+                const prevLeft = player.x - vx * dt;
+                const prevRight = (player.x - vx * dt) + player.w;
+
+                if (prevRight >= wall2.x && vx >= 0){ 
+                    player.x = wall2.x - player.w;
+                    vx = 0;
+                }
+            }
+        }
+
+        // ── 位置更新 ──────────────────────────────────
+        function update(dt){
+            if (isClear) return; // クリア後は動かさない
+             // ゴール判定
+            if (aabb(player, goal)) {
+                isClear = true;
+            }
+
+            // 入力 → 水平方向速度（簡略：即時切替）
+            vx = 0;
+            if (keys['ArrowLeft'])  vx = -speed;
+            if (keys['ArrowRight']) vx =  speed;
+            
+            player.x += vx * dt;
+            vy += g * dt;            // 重力で速度が増える
+            player.y += vy * dt;     // 位置更新
+
+            // 衝突判定（毎フレーム isGrounded をリセットしてから判定）
+            isGrounded = false;
+
+            collideWithFloor();
+            collideWithPlatform(dt, plat);
+            collideWithPlatform(dt, plat2);
+            collideWithPlatform(dt, plat3);
+            collideWithWall(dt);
+            moveWall(dt);
+        }
+
+        // ── 描画 ──────────────────────────────────
+        function draw() {
+            ctx.clearRect(0,0,cv.width,cv.height);
+
+            // 床
+            ctx.fillStyle = '#203060';
+            ctx.fillRect(floor.x, floor.y, floor.w, floor.h);
+
+            // 浮遊足場
+            ctx.fillStyle = '#2e446e';
+            ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+            ctx.fillRect(plat2.x, plat2.y, plat2.w, plat2.h);
+            ctx.fillRect(plat3.x, plat3.y, plat3.w, plat3.h);
+
+            // 動く壁
+            ctx.fillStyle='#4468cc';
+            ctx.fillRect(wall.x,wall.y,wall.w,wall.h);
+            ctx.fillRect(wall2.x,wall2.y,wall2.w,wall2.h);
+
+            // プレイヤー（地上:水色／空中:黄）
+            ctx.fillStyle = isGrounded ? '#7ef5e1' : '#ffd166';
+            ctx.fillRect(player.x, player.y, player.w, player.h);
+
+            // HUD
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '12px ui-monospace,monospace';
+            ctx.fillText(`vy=${vy.toFixed(1)} grounded=${isGrounded}`, 8, 16);
+            
+            // ゴール
+            ctx.fillStyle = "#ffdd33";
+            ctx.fillRect(goal.x, goal.y, goal.w, goal.h);
+
+            // クリアメッセージ
+            if (isClear) {
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "32px sans-serif";
+                ctx.fillText("GAME CLEAR!", 200, 180);
+            }
+        }
+
+        // ── ループ ─────────────────────────────────
+        let last = performance.now();
+        function loop(now) {
+            const dt = (now - last) / 1000; last = now;
+
+            update(dt);
+            draw();
+            requestAnimationFrame(loop);
+        }
+        requestAnimationFrame(loop);
+        </script>
+    </body>
+</html>
