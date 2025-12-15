@@ -4,6 +4,7 @@
 let gameState = "start";   // "start" / "play" / "gameover"
 let gameResult = "";       // "dead" / "clear"
 let isPaused = false;      // ポーズ中かどうか
+let mdown = false;         // マウスがクリックされている状態かどうか
 
 let last = performance.now();
 
@@ -113,25 +114,30 @@ c.addEventListener('mousemove', (e) => {
     const rect = c.getBoundingClientRect();
     mouse.x = e.clientX - rect.left;
     mouse.y = e.clientY - rect.top;
+
+    if (mdown === true){
+        const hit =
+            mx >= player.x &&
+            mx <= player.x + player.w &&
+            my >= player.y &&
+            my <= player.y + player.h;
+
+        if (hit) {
+            player.x = mx - 12;
+        }
+    }
 });
 
 c.addEventListener('mousedown', (e) => {
     if (gameState !== "play" || isPaused) return; // プレイ中＆ポーズ中でないときだけ反応
 
-    const rect = c.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    mdown = true;
+});
 
-    const hit =
-        mx >= player.x &&
-        mx <= player.x + player.w &&
-        my >= player.y &&
-        my <= player.y + player.h;
+c.addEventListener('mouseup', (e) => {
+    if (gamestate !== "play" || isPaused) return;
 
-    if (hit) {
-        player.x = mx - 12;
-    }
-    
+    mdown = false;
 });
 
 // ===============================
