@@ -1,0 +1,24 @@
+{
+  "name": "10_a",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000W\u0000e\u0000b\u0000D\u0000e\u0000s\u0000i\u0000g\u0000n\u00001\u00000\u0000A\u0000\r\u0000 \u0000",
+  "main": "block_break.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Luna-vvzm2/WebDesign10A.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Luna-vvzm2/WebDesign10A/issues"
+  },
+  "homepage": "https://github.com/Luna-vvzm2/WebDesign10A#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

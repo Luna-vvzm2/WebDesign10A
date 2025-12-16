@@ -48,7 +48,7 @@ const player = {
     w: 80,
     h: 20,
     vx: 0,
-    color: "#b52b60ff"
+    color: "#e6e194ff"
 };
 
 // ===============================
@@ -115,27 +115,31 @@ c.addEventListener('mousemove', (e) => {
     mouse.x = e.clientX - rect.left;
     mouse.y = e.clientY - rect.top;
 
-    if (mdown === true){
-        const hit =
-            mx >= player.x &&
-            mx <= player.x + player.w &&
-            my >= player.y &&
-            my <= player.y + player.h;
-
-        if (hit) {
-            player.x = mx - 12;
-        }
+    if (mdown === true && !isPaused){
+            player.x = mouse.x - 30;
     }
 });
 
 c.addEventListener('mousedown', (e) => {
     if (gameState !== "play" || isPaused) return; // プレイ中＆ポーズ中でないときだけ反応
 
-    mdown = true;
+    const rect = c.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+
+    const hit =
+        mouse.x >= player.x &&
+        mouse.x <= player.x + player.w &&
+        mouse.y >= player.y &&
+        mouse.y <= player.y + player.h;
+
+    if (hit) {
+        mdown = true;
+    }
 });
 
 c.addEventListener('mouseup', (e) => {
-    if (gamestate !== "play" || isPaused) return;
+    if (gameState !== "play" || isPaused) return;
 
     mdown = false;
 });
@@ -149,7 +153,7 @@ function updateExplosions(dt) {
     for (let i = explosions.length - 1; i >= 0; i--) {
         const ex = explosions[i];
         ex.life -= dt;
-        ex.radius += 60 * dt;
+        ex.r += 60 * dt;
 
         if (ex.life <= 0) {
             explosions.splice(i, 1);
@@ -165,7 +169,7 @@ function drawExplosions() {
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.beginPath();
-        ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
+        ctx.arc(ex.x, ex.y, ex.r, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(255, 220, 80, 1)";
         ctx.fill();
         ctx.restore();
@@ -408,7 +412,7 @@ function checkCollisionWithEnemies() {
             explosions.push({
                 x: enemy.x + enemy.w / 2,
                 y: enemy.y + enemy.h / 2,
-                r: 10,
+                r: 15,
                 life: 0.3,
                 maxLife: 0.3,
             });
@@ -426,7 +430,14 @@ function checkCollisionWithPlayer() {
         ball.y - CONFIG.r <= player.y + player.h;
 
     if (phit) {
-        ball.vy *= -1;
+        let hitx = (ball.x - player.x + player.w / 2) / (player.w / 2) - 1;
+        if (hitx < 0.2) hitx = 0.2;
+        if (hitx > 0.8) hitx = 0.8;
+
+        let degree = hitx * 60 - 90;
+        ball.vx = CONFIG.speed * Math.sin(degree);
+        ball.vy = CONFIG.speed * Math.cos(degree);
+        console.log (degree);
     }
 }
 
