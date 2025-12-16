@@ -435,8 +435,8 @@ function checkCollisionWithPlayer() {
         if (hitx > 0.8) hitx = 0.8;
 
         let degree = hitx * 60 - 90;
-        ball.vx = CONFIG.speed * Math.sin(degree);
-        ball.vy = CONFIG.speed * Math.cos(degree);
+        ball.vx = ball.vx * Math.sin(degree);
+        ball.vy = ball.vy * Math.cos(degree);
         console.log (degree);
     }
 }
