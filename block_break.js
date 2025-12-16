@@ -430,14 +430,21 @@ function checkCollisionWithPlayer() {
         ball.y - CONFIG.r <= player.y + player.h;
 
     if (phit) {
-        let hitx = (ball.x - player.x + player.w / 2) / (player.w / 2) - 1;
-        if (hitx < 0.2) hitx = 0.2;
-        if (hitx > 0.8) hitx = 0.8;
+        let playerCenterX = player.x + player.w / 2;
+        let offset = ball.x - playerCenterX;
+        let normalized = offset / (player.w / 2);
 
-        let degree = hitx * 60 - 90;
-        ball.vx = ball.vx * Math.sin(degree);
-        ball.vy = ball.vy * Math.cos(degree);
-        console.log (degree);
+        if (normalized < -1) normalized = -1;
+        if (normalized > 1) normalized = 1;
+
+        const maxAngle = 60;
+        let degree = normalized * maxAngle;
+
+        const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+        const rad = degree * Math.PI / 180;
+
+        ball.vx = speed * Math.sin(rad);
+        ball.vy = -speed * Math.cos(rad);
     }
 }
 
